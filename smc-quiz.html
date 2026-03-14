@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SMC Quiz — Gold Trading</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--panel:#0d1525;--border:#1e2d45;
+  --green:#00e5a0;--red:#ff4d6d;--yellow:#ffd166;--blue:#4ea8ff;
+  --t1:#f0f6ff;--t2:#b8d0ea;--tm:#7a9aba;--inp:#0f1a2e;
+}
+body{background:var(--bg);color:var(--t1);font-family:'Courier New',monospace;min-height:100vh}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+#header{background:#0b1120;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+#header h1{font-size:20px;font-weight:800;color:var(--green);letter-spacing:1px}
+#header p{font-size:10px;color:var(--tm);letter-spacing:2px;margin-top:3px}
+#stats-bar{display:flex;gap:20px;flex-wrap:wrap}
+.stat-box{text-align:center}
+.stat-val{font-size:17px;font-weight:700}
+.stat-lbl{font-size:9px;color:var(--tm);letter-spacing:1px}
+
+#tabs{display:flex;background:#0b1120;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:11px 22px;font-size:11px;font-family:inherit;background:transparent;color:var(--tm);border:none;border-bottom:2px solid transparent;cursor:pointer;letter-spacing:1px;transition:all .2s;white-space:nowrap}
+.tab.active{background:var(--bg);color:var(--green);border-bottom:2px solid var(--green)}
+
+#sync-bar{background:#080d18;border-bottom:1px solid var(--border);padding:8px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sync-label{font-size:9px;color:var(--tm);letter-spacing:2px;white-space:nowrap}
+.sync-btn{padding:6px 14px;border-radius:3px;font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:1px;font-weight:700;transition:all .2s;white-space:nowrap}
+.sync-export{background:transparent;border:1px solid var(--green);color:var(--green)}
+.sync-export:hover{background:#00e5a015}
+.sync-import{background:transparent;border:1px solid var(--blue);color:var(--blue)}
+.sync-import:hover{background:#4ea8ff15}
+.sync-reset{background:transparent;border:1px solid var(--border);color:var(--tm)}
+.sync-reset:hover{border-color:var(--red);color:var(--red)}
+.sync-status{font-size:10px;color:var(--tm);margin-left:auto;letter-spacing:1px}
+#import-file{display:none}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0d1525;border:1px solid var(--green);color:var(--green);padding:10px 22px;border-radius:6px;font-size:12px;font-family:'Courier New',monospace;letter-spacing:1px;opacity:0;transition:all .35s;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+#content{padding:20px;max-width:820px;margin:0 auto}
+
+/* Progress bar */
+.prog-wrap{margin-bottom:18px}
+.prog-bar-bg{background:var(--border);border-radius:2px;height:4px}
+.prog-bar-fill{height:4px;border-radius:2px;background:var(--green);transition:width .4s}
+.prog-info{display:flex;justify-content:space-between;font-size:10px;color:var(--tm);letter-spacing:1px;margin-top:5px}
+
+/* Section filter */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.ftag{padding:5px 12px;border:1px solid var(--border);border-radius:3px;font-size:10px;font-family:inherit;background:transparent;color:var(--tm);cursor:pointer;letter-spacing:1px;transition:all .2s}
+.ftag.active{border-color:var(--green);color:var(--green);background:#00e5a010}
+
+/* Question card */
+.q-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px}
+.q-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.sec-tag{padding:3px 9px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:1px}
+.q-num{font-size:10px;color:var(--tm);letter-spacing:1px}
+.q-status{font-size:10px;letter-spacing:1px;margin-left:auto}
+.q-text{font-size:14px;color:var(--t1);line-height:1.7;margin-bottom:14px}
+.options{display:flex;flex-direction:column;gap:8px}
+.opt{padding:11px 14px;border:1px solid var(--border);border-radius:6px;background:var(--inp);color:var(--t2);font-size:13px;font-family:inherit;cursor:pointer;text-align:left;line-height:1.5;transition:all .2s;display:flex;align-items:flex-start;gap:10px}
+.opt:hover:not(:disabled){border-color:var(--tm);color:var(--t1)}
+.opt-key{font-weight:700;flex-shrink:0;margin-top:1px}
+.opt.correct{border-color:var(--green);background:#00e5a012;color:var(--green)}
+.opt.wrong{border-color:var(--red);background:#ff4d6d10;color:var(--red)}
+.opt.reveal-ans{border-color:var(--green);background:#00e5a012;color:var(--green)}
+.opt:disabled{cursor:default}
+.exp-box{margin-top:12px;background:#0a0e1a;border-left:3px solid var(--green);padding:11px 14px;border-radius:0 6px 6px 0;font-size:12px;color:var(--tm);line-height:1.7}
+.exp-box b{color:var(--yellow)}
+.q-footer{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.btn-peek{padding:7px 14px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--tm);font-family:inherit;font-size:11px;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.btn-peek:hover{border-color:var(--yellow);color:var(--yellow)}
+.answered-tag{font-size:10px;letter-spacing:1px;padding:4px 10px;border-radius:3px}
+
+/* Score pane */
+.score-hero{text-align:center;padding:30px 0 20px}
+.score-big{font-size:64px;font-weight:800;color:var(--green);line-height:1}
+.score-sub{font-size:12px;color:var(--tm);letter-spacing:2px;margin-top:6px}
+.grade-pill{display:inline-block;margin:14px 0 0;padding:7px 22px;border-radius:4px;font-size:13px;font-weight:700;letter-spacing:1px}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.scard{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center}
+.scard-val{font-size:20px;font-weight:700}
+.scard-lbl{font-size:9px;color:var(--t2);letter-spacing:1px;margin-top:4px}
+.sec-breakdown{margin-top:18px}
+.sec-title{font-size:10px;color:var(--tm);letter-spacing:2px;margin-bottom:10px}
+.sec-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:11px}
+.sec-name{width:170px;flex-shrink:0;color:var(--t2)}
+.sec-bar-bg{flex:1;height:5px;border-radius:2px;background:var(--border)}
+.sec-bar-fill{height:5px;border-radius:2px;transition:width .5s}
+.sec-score{width:44px;text-align:right;flex-shrink:0;color:var(--tm)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.btn-main{padding:11px 24px;border-radius:6px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s}
+.btn-green{background:var(--green);border:none;color:#0a0e1a}
+.btn-green:hover{background:#00c988}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--t2)}
+.btn-outline:hover{border-color:var(--tm);color:var(--t1)}
+
+/* Review pane */
+.filter-btns{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.fbtn{padding:6px 14px;border:1px solid var(--border);border-radius:3px;font-family:inherit;font-size:10px;background:transparent;color:var(--tm);cursor:pointer;letter-spacing:1px}
+.fbtn.active{background:var(--green);border-color:var(--green);color:#0a0e1a;font-weight:700}
+.rv-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
+.rv-q{font-size:13px;color:var(--t1);font-weight:700;margin-bottom:8px;line-height:1.6}
+.rv-row{font-size:11px;color:var(--tm);margin-bottom:4px;line-height:1.6}
+.rv-row span{font-weight:700}
+.rv-exp{font-size:11px;color:var(--tm);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.7}
+
+.empty{text-align:center;color:var(--tm);padding:60px 0;font-size:13px;letter-spacing:1px}
+.save-note{text-align:center;font-size:10px;color:var(--border);letter-spacing:1px;margin-top:20px;padding-bottom:10px}
+
+@media(max-width:520px){
+  .cards3{grid-template-columns:repeat(3,1fr)}
+  .scard-val{font-size:16px}
+  .q-text{font-size:13px}
+  .opt{font-size:12px}
+  .sec-name{width:120px}
+  #content{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>SMC QUIZ</h1>
+    <p>SMART MONEY CONCEPT — GOLD TRADING</p>
+  </div>
+  <div id="stats-bar">
+    <div class="stat-box"><div class="stat-val" id="s-score" style="color:var(--green)">0%</div><div class="stat-lbl">SCORE</div></div>
+    <div class="stat-box"><div class="stat-val" id="s-done" style="color:var(--yellow)">0</div><div class="stat-lbl">ANSWERED</div></div>
+    <div class="stat-box"><div class="stat-val" id="s-correct" style="color:var(--green)">0</div><div class="stat-lbl">CORRECT</div></div>
+    <div class="stat-box"><div class="stat-val" id="s-wrong" style="color:var(--red)">0</div><div class="stat-lbl">WRONG</div></div>
+  </div>
+</div>
+
+<div id="tabs">
+  <button class="tab active" onclick="switchTab('quiz')">📝 ทำข้อสอบ</button>
+  <button class="tab" onclick="switchTab('score')">📊 สรุปคะแนน</button>
+  <button class="tab" onclick="switchTab('review')">🔍 ทบทวน</button>
+</div>
+
+<div id="sync-bar">
+  <span class="sync-label">SYNC</span>
+  <button class="sync-btn sync-export" onclick="exportProgress()">⬇ EXPORT JSON</button>
+  <button class="sync-btn sync-import" onclick="document.getElementById('import-file').click()">⬆ IMPORT JSON</button>
+  <input type="file" id="import-file" accept=".json" onchange="importProgress(event)"/>
+  <button class="sync-btn sync-reset" onclick="resetAll()">✕ รีเซ็ต</button>
+  <span class="sync-status" id="sync-status">—</span>
+</div>
+
+<div id="toast"></div>
+
+<div id="content">
+  <div id="pane-quiz"></div>
+  <div id="pane-score" style="display:none"></div>
+  <div id="pane-review" style="display:none"></div>
+</div>
+
+<script>
+const SAVE_KEY = "smc_quiz_v4";
+const G = "#00e5a0", R = "#ff4d6d", Y = "#ffd166", B = "#4ea8ff", TM = "#7a9aba";
+
+const SEC_COLORS = {
+  "Market Structure":"#00e5a0","Order Blocks":"#4ea8ff","Fair Value Gap":"#ffd166",
+  "Liquidity":"#ff4d6d","Premium & Discount":"#c084fc","Sessions & Timing":"#fb923c",
+  "Entry & RR":"#34d399","Multi-Timeframe":"#7a9aba",
+  "Psychology & Mindset":"#f472b6","Gold Knowledge":"#facc15"
+};
+
+const QUESTIONS = [
+  {id:1,section:"Market Structure",q:"ใน SMC การที่ราคาทำ Higher High (HH) และ Higher Low (HL) ต่อเนื่องกัน หมายความว่าอย่างไร?",
+   opts:["Bearish Market Structure — แนวโน้มขาลง","Bullish Market Structure — แนวโน้มขาขึ้น","Sideways Market — ราคาแกว่งไม่มีทิศทาง","Market Structure Break กำลังเกิดขึ้น"],
+   ans:1,exp:"เมื่อราคาทำ HH และ HL ต่อเนื่อง หมายความว่าตลาดอยู่ในแนวโน้มขาขึ้น (Bullish Market Structure) Smart Money กำลัง accumulate ทองคำอยู่"},
+  {id:2,section:"Market Structure",q:"Market Structure Break (MSB) หรือ Break of Structure (BOS) คืออะไร?",
+   opts:["ราคาทดสอบแนวรับแนวต้านเดิม","ราคาทำลาย Swing High/Low สำคัญ ส่งสัญญาณเปลี่ยนแนวโน้ม","Volume เพิ่มขึ้นผิดปกติ","Gap เกิดขึ้นบนกราฟ"],
+   ans:1,exp:"BOS เกิดเมื่อราคาทะลุ Swing High (bearish→bullish) หรือ Swing Low (bullish→bearish) Smart Money เปลี่ยนทิศทางแล้ว"},
+  {id:3,section:"Market Structure",q:"Change of Character (CHoCH) ใน SMC แตกต่างจาก BOS อย่างไร?",
+   opts:["CHoCH เกิดก่อน BOS เป็นสัญญาณเตือนแรกของการเปลี่ยนทิศ","BOS เกิดก่อนเสมอ","ทั้งสองเกิดพร้อมกัน","ไม่มีความแตกต่าง ใช้แทนกันได้"],
+   ans:0,exp:"CHoCH คือสัญญาณแรกที่บอกว่าโครงสร้างตลาดอาจเปลี่ยน มักเป็นการทะลุ minor swing ในขณะที่ BOS คือการทะลุ Swing Low/High สำคัญ"},
+  {id:4,section:"Order Blocks",q:"Order Block (OB) ใน SMC คืออะไร?",
+   opts:["แท่งเทียนสีแดง/เขียวขนาดใหญ่ที่ปิดแรง","กลุ่มแท่งเทียนสุดท้ายก่อนที่ราคาจะ impulse move อย่างรุนแรง","พื้นที่ที่มี Volume สูงผิดปกติ","ช่องว่างระหว่างสองแท่งเทียน"],
+   ans:1,exp:"Order Block คือแท่งเทียนสุดท้ายก่อน impulse move Smart Money วาง order ขนาดใหญ่ไว้ที่นี่ เมื่อราคา retrace กลับมาจะเกิด reaction"},
+  {id:5,section:"Order Blocks",q:"Bullish Order Block (Bullish OB) สำหรับทองคำ ควรมองหาจากแท่งเทียนประเภทใด?",
+   opts:["แท่งเทียนสีแดง (Bearish) สุดท้ายก่อนราคาพุ่งขึ้นแรง","แท่งเทียนสีเขียว (Bullish) สุดท้ายก่อนราคาลงแรง","บริเวณที่ราคาแกว่งนานที่สุด","จุดที่ RSI Oversold"],
+   ans:0,exp:"Bullish OB คือแท่งเทียน Bearish สุดท้าย (สีแดง) ก่อน impulse ขึ้น Smart Money ซื้อในแท่งนั้น เมื่อราคา retrace ถึงโซนนี้จะเป็น buying opportunity"},
+  {id:6,section:"Order Blocks",q:"เมื่อราคาทองคำ retrace กลับมาหา Order Block ควรรอ confirmation แบบใดก่อน entry?",
+   opts:["รอให้ราคาทะลุผ่าน OB ไปก่อนแล้วค่อย entry","รอ rejection candle, engulfing หรือ CHoCH ใน lower timeframe","ใช้ MACD cross เป็น signal","เปิด order ทันทีที่ราคาแตะขอบ OB"],
+   ans:1,exp:"การรอ confirmation เช่น rejection candle, Engulfing, หรือ CHoCH ใน LTF ลด false signal อย่างมาก เพิ่ม probability การค้าที่สำเร็จ"},
+  {id:7,section:"Fair Value Gap",q:"Fair Value Gap (FVG) หรือ Imbalance ใน SMC เกิดจากอะไร?",
+   opts:["ราคาเคลื่อนไหวช้าและ consolidate นาน","ราคาเคลื่อนไหวเร็วเกินไปจนมี Gap ระหว่าง High/Low ของแท่งก่อน-หลัง","Volume ลดลงอย่างกะทันหัน","News สำคัญกำลังจะออก"],
+   ans:1,exp:"FVG เกิดเมื่อราคาเคลื่อนที่เร็วมาก ทำให้ Low ของแท่งที่ 3 สูงกว่า High ของแท่งที่ 1 (Bullish FVG) ตลาดมักกลับมา fill ช่องว่างนี้"},
+  {id:8,section:"Fair Value Gap",q:"Bullish FVG ในแนวโน้มขาขึ้น เราควรทำอะไรเมื่อราคา retrace กลับเข้ามา?",
+   opts:["Sell เมื่อราคา retrace กลับเข้า FVG","Buy เมื่อราคา retrace กลับเข้ามาใน FVG Zone","รอจนราคาปิดทะลุ FVG ก่อน","ไม่ trade เพราะ FVG คือ danger zone"],
+   ans:1,exp:"Bullish FVG ในแนวโน้มขาขึ้นคือโซน Support ที่ Smart Money มักซื้อเพิ่ม เมื่อราคา pullback เข้ามาใน FVG คือโอกาส Buy ที่ดี"},
+  {id:9,section:"Fair Value Gap",q:"Inverse FVG (iFVG) คืออะไร?",
+   opts:["FVG ที่เกิดขึ้นในแนวโน้มขาลง","FVG ที่ถูก filled แล้วกลายเป็น zone ตรงข้าม (Bullish→Resistance, Bearish→Support)","FVG ที่เกิดจาก News","FVG ขนาดเล็กที่ไม่มีนัยสำคัญ"],
+   ans:1,exp:"iFVG คือ FVG ที่ราคา fill เต็มแล้ว zone นั้นจะ flip เป็น zone ตรงข้าม Bullish FVG ที่ถูก fill ครบแล้วจะกลายเป็น Resistance zone"},
+  {id:10,section:"Liquidity",q:"Liquidity ใน SMC คืออะไร และ Smart Money ต้องการมันเพื่ออะไร?",
+   opts:["กระแสเงินในระบบธนาคาร ใช้กำหนดอัตราดอกเบี้ย","Cluster ของ Stop Loss orders ที่ Smart Money ต้องการเพื่อ fill order ขนาดใหญ่","ปริมาณการซื้อขายรายวัน","ช่องว่างระหว่าง Bid-Ask"],
+   ans:1,exp:"Smart Money ต้องการ Liquidity เพื่อ fill order ขนาดใหญ่ Buy Stops อยู่เหนือ Swing High และ Sell Stops อยู่ใต้ Swing Low ราคามักวิ่งไปล่า Liquidity ก่อนกลับทิศ"},
+  {id:11,section:"Liquidity",q:"'Stop Hunt' หรือ 'Liquidity Sweep' ในทองคำ คืออะไร?",
+   opts:["ราคาทองคำหยุดวิ่งกะทันหัน","ราคาวิ่งทะลุ Swing High เพื่อ trigger Stop Loss ของ Short แล้วกลับทิศลงอย่างรวดเร็ว","ราคาแกว่งในช่วงแคบนานกว่า 2 วัน","Volume ต่ำกว่าค่าเฉลี่ย"],
+   ans:1,exp:"Stop Hunt เกิดเมื่อราคาทะลุ Swing High/Low รวดเร็วเพื่อล่า Stop Loss แล้วกลับทิศทันที ในทองคำเกิดบ่อยช่วง London Open และ NY Open"},
+  {id:12,section:"Liquidity",q:"Equal Highs (EQH) และ Equal Lows (EQL) มีนัยสำคัญอย่างไรใน SMC?",
+   opts:["เป็นสัญญาณ Sideways ควรหลีกเลี่ยง","เป็นแหล่ง Liquidity ที่ Smart Money จะ grab ก่อนเปลี่ยนทิศ","บอกว่าตลาดมี Supply/Demand สมดุล","ใช้เป็นจุดตั้ง Take Profit เสมอ"],
+   ans:1,exp:"EQH/EQL คือแหล่ง Liquidity ชั้นดี Retail traders มักวาง Stop ใต้ EQL หรือเหนือ EQH Smart Money จะ sweep ก่อนเคลื่อนที่ในทิศตรงข้าม"},
+  {id:13,section:"Premium & Discount",q:"Premium Zone และ Discount Zone ใน SMC คืออะไร?",
+   opts:["Premium = เหนือ 50% ของ Swing Range (แพง/ขาย), Discount = ใต้ 50% (ถูก/ซื้อ)","Premium = โซน spread สูง, Discount = โซน spread ต่ำ","Premium = Timeframe สูง, Discount = Timeframe ต่ำ","Premium = London session, Discount = Asian session"],
+   ans:0,exp:"Premium Zone อยู่เหนือ 50% ของ swing range ล่าสุด (แพง เหมาะ Sell) ส่วน Discount Zone อยู่ใต้ 50% (ถูก เหมาะ Buy) ควรผสมกับ OB/FVG"},
+  {id:14,section:"Premium & Discount",q:"ถ้า Gold วิ่งจาก 2000 ถึง 2100 จุด Equilibrium (50%) อยู่ที่ราคาเท่าไหร่?",
+   opts:["2025","2050","2060","2075"],
+   ans:1,exp:"Equilibrium = (2000+2100)/2 = 2050 เหนือ 2050 คือ Premium zone (เหมาะ Sell) ใต้ 2050 คือ Discount zone (เหมาะ Buy)"},
+  {id:15,section:"Premium & Discount",q:"ถ้า Daily bias เป็น Bullish และราคากำลัง retrace มา ควร Buy เมื่อราคาอยู่ที่ระดับใด?",
+   opts:["ที่ Premium zone เพราะราคาสูง = แข็งแกร่ง","ที่ Discount zone + Bullish OB หรือ FVG","ที่ Equilibrium เสมอ","ไม่ซื้อจนกว่าราคาจะทำ HH ใหม่"],
+   ans:1,exp:"ใน Bullish bias ควร Buy ใน Discount zone (ต่ำกว่า 50%) ที่มี confluences เช่น OB หรือ FVG เป็น entry zone ที่มี probability สูงและ SL แคบ"},
+  {id:16,section:"Sessions & Timing",q:"ในทองคำ (XAUUSD) เซสชั่นไหนที่มักเกิด Liquidity Sweep และ High Impact Move มากที่สุด?",
+   opts:["Asian Session (02:00-08:00 GMT)","London Session Open และ New York Open","New York Close (20:00-22:00 GMT)","ทุก session มีโอกาสเท่ากัน"],
+   ans:1,exp:"London Open และ NY Open คือช่วง Volatility สูงสุดสำหรับทองคำ Smart Money มักสร้าง False Break ช่วง London Open ก่อน NY follow through ในทิศจริง"},
+  {id:17,section:"Sessions & Timing",q:"'Kill Zones' ใน SMC/ICT สำหรับ Gold หมายถึงช่วงเวลาใด?",
+   opts:["ช่วงที่ควรหลีกเลี่ยงการเทรดทั้งหมด","ช่วงเวลาที่มี High Probability setup เช่น London Open, NY Open","ช่วงที่ข่าวสำคัญออก","ช่วง rollover ตอนเที่ยงคืน"],
+   ans:1,exp:"Kill Zones คือช่วงเวลาที่มี probability สูงสำหรับ SMC setup ได้แก่ London Kill Zone (02:00-05:00 NY Time) และ NY Kill Zone (07:00-10:00 NY Time)"},
+  {id:18,section:"Entry & RR",q:"การตั้ง Stop Loss ตาม SMC สำหรับ Gold Buy order ควรวางไว้ที่ไหน?",
+   opts:["ห่างจาก entry 50 pips เสมอ","ใต้ Order Block หรือ FVG ที่ใช้เป็น entry zone บวก buffer เล็กน้อย","ที่ Swing Low ที่ไกลที่สุดบนกราฟ","ใต้ราคา entry 1%"],
+   ans:1,exp:"SL ที่ดีตาม SMC วางใต้ OB/FVG ที่ใช้ entry มี buffer เพื่อป้องกัน false sweep ถ้า OB ถูก invalidate แสดงว่า thesis ผิด การกำหนดตาม structure ดีกว่าจำนวน pips คงที่"},
+  {id:19,section:"Entry & RR",q:"Risk:Reward Ratio (RRR) ขั้นต่ำที่ SMC traders แนะนำคือเท่าไหร่?",
+   opts:["1:1","1:2","1:3","1:5"],
+   ans:1,exp:"RRR 1:2 คือขั้นต่ำที่ยอมรับได้ SMC setups ที่ดีมักให้ RRR 1:3-1:5 เพราะ entry อยู่ใน high probability zone และ SL แคบ"},
+  {id:20,section:"Entry & RR",q:"Position Sizing ที่ดีสำหรับเทรด Gold ควรเสี่ยงต่อ trade ไม่เกินเท่าไหร่?",
+   opts:["10% ต่อ trade","5% ต่อ trade","1-2% ต่อ trade","0.1% ต่อ trade"],
+   ans:2,exp:"การเสี่ยง 1-2% ต่อ trade คือ standard ที่ professional traders ใช้ Gold มี volatility สูง การ over-leverage จะทำให้ account หมดเร็วแม้มี edge ที่ดี"},
+  {id:21,section:"Multi-Timeframe",q:"การวิเคราะห์ Multi-Timeframe (MTF) ใน SMC ควรเริ่มจาก Timeframe ไหน?",
+   opts:["เริ่มจาก 1M แล้วขึ้น Higher TF","เริ่มจาก Higher TF (Weekly/Daily) ลงมา Lower TF เพื่อ entry","ดู 1H เป็นหลักพอ","เลือก TF ที่ trend ชัดที่สุด"],
+   ans:1,exp:"SMC ใช้ Top-Down Analysis: Weekly/Daily เพื่อดู bias → H4 เพื่อดู structure/OB หลัก → H1/M15 เพื่อหา entry zone → M5/M1 สำหรับ precise entry"},
+  {id:22,section:"Multi-Timeframe",q:"ถ้า Daily chart ของ Gold เป็น Bearish แต่ H1 ให้ Bullish signal ควรทำอย่างไร?",
+   opts:["เปิด Buy ตาม H1 ได้เลย","เปิด Buy แต่ใช้ position size เล็ก","รอ Bearish signal ใน H1 ด้วย เพราะ HTF bias สำคัญกว่า","หยุดเทรดทองในช่วงนั้น"],
+   ans:2,exp:"Higher Timeframe (Daily) bias ควรเป็น filter หลัก การ Buy ขณะที่ Daily เป็น Bearish มี probability ต่ำ ควรรอ Bearish setup ใน H1 เพื่อ Sell ตาม Daily bias"},
+  {id:23,section:"Multi-Timeframe",q:"Confluences ใน SMC หมายถึงอะไร และสำคัญอย่างไร?",
+   opts:["การใช้หลาย indicator พร้อมกัน","การที่หลาย SMC factors ชี้ไปในทิศเดียวกัน เพิ่ม probability ของ trade","การเทรดในทุก timeframe พร้อมกัน","การวิเคราะห์หลาย currency pairs"],
+   ans:1,exp:"Confluences คือจุดที่หลาย factors รวมกัน เช่น Discount zone + Bullish OB + Bullish FVG + Session timing + HTF Bullish bias ยิ่งมี confluences มาก probability ยิ่งสูง"},
+  {id:24,section:"Market Structure",q:"Swing High และ Swing Low ที่ถูกต้องตาม SMC ควรเป็นแบบใด?",
+   opts:["จุดสูง/ต่ำใดก็ได้บนกราฟ","จุดที่มีแท่งเทียนอย่างน้อย 2-3 แท่งขึ้นไปทั้งทางซ้ายและขวาที่ต่ำ/สูงกว่า","เฉพาะ High/Low ของแท่ง Doji","จุดที่ RSI กลับตัว"],
+   ans:1,exp:"Swing High/Low ที่ valid ต้องมีแท่งเทียนอย่างน้อย 2-3 แท่งทั้งซ้ายและขวาที่ต่ำกว่า (Swing High) หรือสูงกว่า (Swing Low) จึงจะถือว่ามีนัยสำคัญ"},
+  {id:25,section:"Liquidity",q:"Buyside Liquidity (BSL) และ Sellside Liquidity (SSL) คืออะไร?",
+   opts:["BSL = โซนซื้อ, SSL = โซนขาย","BSL = Stop Loss ของ Short positions เหนือ Swing High, SSL = Stop Loss ของ Long positions ใต้ Swing Low","BSL = ช่วง London, SSL = ช่วง NY","BSL = Bull candles, SSL = Bear candles"],
+   ans:1,exp:"BSL คือ Buy Stops ที่สะสมเหนือ Swing High (Stop Loss ของ Short sellers) SSL คือ Sell Stops ใต้ Swing Low (Stop Loss ของ Long holders) Smart Money จะ sweep ทั้งสองเพื่อ fill orders"},
+
+  // ── Market Structure (26-34) ──
+  {id:26,section:"Market Structure",q:"Internal Structure และ External Structure ใน SMC แตกต่างกันอย่างไร?",
+   opts:["Internal = กราฟ 1H ลงมา, External = กราฟ 4H ขึ้นไป","Internal = Swing ย่อยภายใน impulse leg, External = Swing หลักที่กำหนด trend","Internal = Buy side, External = Sell side","ไม่มีความแตกต่าง ใช้แทนกันได้"],
+   ans:1,exp:"External Structure คือ Swing High/Low หลักที่กำหนดทิศทาง trend ส่วน Internal Structure คือ swing ย่อยที่เกิดภายใน impulse leg แต่ละช่วง การเข้าใจทั้งสองช่วย identify entry ได้แม่นขึ้น"},
+  {id:27,section:"Market Structure",q:"Inducement (IDM) ใน SMC คืออะไร?",
+   opts:["การที่ราคาทดสอบ OB ซ้ำหลายครั้ง","การที่ Smart Money สร้าง Swing Low/High ปลอมเพื่อดักจับ Retail traders ก่อนเคลื่อนในทิศจริง","การที่ราคาทำ double top/bottom","Volume spike ที่เกิดขึ้นก่อน news"],
+   ans:1,exp:"IDM คือกับดักที่ Smart Money สร้างขึ้น เช่น ทำ Swing Low ปลอมในแนวโน้มขาขึ้นให้ Retail ขาย แล้วกลับทิศขึ้นอย่างรุนแรง Retail ถูก stop out ขณะที่ SM เปิด Long ในราคาดี"},
+  {id:28,section:"Market Structure",q:"ใน Bearish Market Structure ราคาควรทำรูปแบบใด?",
+   opts:["Higher High และ Higher Low","Lower High และ Lower Low","Higher High และ Lower Low","Lower High และ Higher Low"],
+   ans:1,exp:"Bearish Market Structure มีลักษณะทำ Lower High (LH) และ Lower Low (LL) ต่อเนื่อง แสดงว่า Smart Money กำลัง distribute และขายออกทองคำอยู่"},
+  {id:29,section:"Market Structure",q:"Point of Interest (POI) ใน SMC หมายถึงอะไร?",
+   opts:["ราคาที่ข่าวสำคัญออก","โซนราคาที่ Smart Money เคย place order ขนาดใหญ่ เช่น OB, FVG, Liquidity zone","จุดที่ RSI ทำ divergence","Candle pattern ที่น่าสนใจ"],
+   ans:1,exp:"POI คือโซนราคาที่ Smart Money มีประวัติ place order เช่น Order Block, FVG, Liquidity void เมื่อราคากลับมาที่ POI มักเกิด strong reaction เพราะ SM re-enter ที่ราคาเดิม"},
+  {id:30,section:"Market Structure",q:"Displacement ใน SMC คืออะไร?",
+   opts:["การที่ราคาค่อยๆ เคลื่อนขึ้นลงปกติ","การที่ราคาเคลื่อนที่อย่างรวดเร็วและรุนแรงในทิศเดียว มักทิ้ง FVG ไว้","การที่ราคาออกข้าง Consolidation zone","การที่ราคากลับมา retrace เต็ม 100%"],
+   ans:1,exp:"Displacement คือการเคลื่อนที่ของราคาที่รุนแรงและรวดเร็ว (impulse move) ซึ่งมักทิ้ง FVG ไว้ เป็นสัญญาณที่ Smart Money เข้า order ขนาดใหญ่ มักเกิดหลัง Liquidity sweep"},
+  {id:31,section:"Market Structure",q:"Accumulation, Manipulation, Distribution (AMD) ใน SMC คืออะไร?",
+   opts:["3 ขั้นตอนของ Elliott Wave","3 ขั้นตอนที่ Smart Money ดำเนินการในตลาด: สะสม → จัดการราคา → กระจาย","3 ประเภทของ Order Block","3 ระดับของ Liquidity"],
+   ans:1,exp:"AMD คือวงจรที่ SM ดำเนินการ: Accumulation = สะสม position ในช่วง sideways, Manipulation = sweep liquidity เพื่อ fill order, Distribution = push ราคาในทิศที่ต้องการและ take profit"},
+  {id:32,section:"Market Structure",q:"Consolidation zone ใน SMC มีความสำคัญอย่างไร?",
+   opts:["เป็นสัญญาณ exit trade ทันที","เป็นช่วงที่ Smart Money กำลัง accumulate หรือ distribute position เตรียม move ใหญ่","เป็นโซนที่ควรหลีกเลี่ยงทั้งหมด","เกิดจาก retail traders เท่านั้น"],
+   ans:1,exp:"Consolidation คือช่วงที่ราคาแกว่งในกรอบแคบ ซึ่ง Smart Money ใช้ accumulate (ก่อน bullish move) หรือ distribute (ก่อน bearish move) มักเกิด liquidity sweep ที่ขอบทั้งสองก่อน breakout"},
+  {id:33,section:"Market Structure",q:"ใน SMC เมื่อ BOS เกิดขึ้น Previous Swing High/Low มีบทบาทอย่างไร?",
+   opts:["กลายเป็น OB ที่ใช้ entry ได้เลย","กลายเป็น POI ที่ราคามักกลับมา retest ก่อนเดินหน้าต่อ","หมดความสำคัญทันที","กลายเป็น Take Profit target"],
+   ans:1,exp:"หลัง BOS เกิด Previous Swing High/Low กลายเป็น POI ที่สำคัญ ราคามักกลับมา retest บริเวณนั้น (ซึ่งมักเป็น OB หรือ FVG) ก่อนเดินหน้าต่อในทิศ BOS นั้นๆ"},
+  {id:34,section:"Market Structure",q:"Failed Swing ใน SMC คืออะไร และสัญญาณบ่งบอกอะไร?",
+   opts:["Swing ที่เกิดขึ้นในช่วง low volume","การที่ราคาพยายามทำ HH/LL ใหม่แต่ล้มเหลว บ่งบอกว่า momentum อ่อนแอลง","แท่งเทียนที่มี wick ยาวผิดปกติ","Pattern ที่เกิดจาก gap opening"],
+   ans:1,exp:"Failed Swing เกิดเมื่อราคาพยายามทำ Higher High ใหม่แต่ไม่สำเร็จ (ใน uptrend) บ่งบอกว่า buying momentum อ่อนแอ อาจเป็นสัญญาณเตือนล่วงหน้าก่อน BOS จะเกิดขึ้น"},
+
+  // ── Order Blocks (35-43) ──
+  {id:35,section:"Order Blocks",q:"Mitigation Block ใน SMC คืออะไร?",
+   opts:["OB ที่ราคากลับมาทดสอบแล้ว และ reaction ไม่แรงพอ ถือว่า OB ถูก mitigated (ใช้งานไปแล้ว)","OB ที่เพิ่งเกิดขึ้นใหม่","OB ที่อยู่ใน Premium zone","OB ที่เกิดจาก news event"],
+   ans:0,exp:"Mitigation Block คือ OB ที่ราคากลับมาทดสอบและ 'ใช้งานไปแล้ว' แรง reaction จาก OB ที่ถูก mitigate แล้วจะลดลงมาก ควรหา OB ใหม่แทนที่จะรอ reaction จาก OB เก่าที่ถูก mitigate แล้ว"},
+  {id:36,section:"Order Blocks",q:"Breaker Block ใน SMC เกิดขึ้นอย่างไร?",
+   opts:["OB ที่เกิดขึ้นในช่วงที่ Volume สูง","OB เดิมที่ราคาทะลุผ่านไปแล้ว กลายเป็น zone ตรงข้าม (Bullish OB → Bearish Breaker)","OB ที่เกิดหลัง BOS","OB ที่มีขนาดใหญ่กว่าปกติ"],
+   ans:1,exp:"Breaker Block คือ OB เดิมที่ราคาทะลุผ่าน (invalidate) ไปแล้ว กลายเป็น zone ตรงข้าม Bullish OB ที่ถูกทะลุลงมาจะกลายเป็น Bearish Breaker Block ซึ่งเป็น resistance zone ในอนาคต"},
+  {id:37,section:"Order Blocks",q:"Rejection Block ใน SMC คืออะไร?",
+   opts:["แท่งเทียนที่มี wick ยาวมาก แสดงถึงการ rejection ของราคาที่ระดับนั้น","OB ที่ถูก reject แล้วไม่มีประสิทธิภาพ","การที่ราคา reject จาก trend line","แท่งเทียน Doji ที่เกิดที่ OB"],
+   ans:0,exp:"Rejection Block คือแท่งเทียนที่มี upper/lower wick ยาวมาก แสดงถึงการ rejection รุนแรงของราคา เมื่อราคากลับมาที่ zone นี้จะมักเกิด reaction อีกครั้ง คล้ายกับ OB แต่เน้นที่ wick"},
+  {id:38,section:"Order Blocks",q:"การที่ OB มีขนาด (range) ใหญ่มาก ส่งผลอย่างไรต่อการใช้งาน?",
+   opts:["ยิ่งใหญ่ยิ่งดี เพราะ reaction แรงกว่า","OB ขนาดใหญ่มาก SL จะกว้าง อาจทำให้ RRR ไม่ดี ควรใช้ lower TF หา entry ที่แม่นกว่า","ไม่มีผลต่อการใช้งาน","OB ขนาดใหญ่มักเป็น false signal"],
+   ans:1,exp:"OB ขนาดใหญ่หมายถึง SL ต้องวางห่างขึ้น ทำให้ RRR แย่ลง วิธีแก้คือ drill down ไปยัง lower timeframe เพื่อหา OB หรือ FVG ที่แม่นกว่าภายใน OB ใหญ่นั้น เรียกว่า 'refine entry'"},
+  {id:39,section:"Order Blocks",q:"เมื่อไหร่ที่ Order Block ถือว่า Invalidated (หมดอายุ)?",
+   opts:["เมื่อราคาทดสอบ OB ครั้งแรก","เมื่อราคาปิดทะลุผ่าน OB ไปอย่างชัดเจน","เมื่อเวลาผ่านไปมากกว่า 24 ชั่วโมง","เมื่อ Volume ลดลง"],
+   ans:1,exp:"OB ถือว่า Invalidated เมื่อราคาปิดทะลุผ่านไปอย่างชัดเจน (ไม่ใช่แค่ wick) หมายความว่า SM ไม่ได้ defend zone นั้นอีกแล้ว thesis เดิมผิด ควรหา OB ใหม่แทน"},
+  {id:40,section:"Order Blocks",q:"Propulsion Block ใน SMC คืออะไร?",
+   opts:["OB ที่เกิดในช่วง News","กลุ่มแท่งเทียนที่เกิดหลังจาก OB ถูก mitigated แล้วราคา consolidate ก่อน push ต่อ","OB ที่มีขนาดเล็กมาก","OB ที่เกิดซ้อนกันหลายชั้น"],
+   ans:1,exp:"Propulsion Block คือโซน consolidation ที่เกิดหลัง OB ถูก mitigated ราคามักกลับมา retrace เข้า Propulsion Block ก่อนเดินหน้าต่อในทิศเดิม ใช้เป็น secondary entry zone ได้ดี"},
+  {id:41,section:"Order Blocks",q:"ทำไม Order Block ใน Higher Timeframe จึงมีความสำคัญกว่า Lower Timeframe?",
+   opts:["เพราะเห็นได้ง่ายกว่า","เพราะ Smart Money สถาบันขนาดใหญ่ใช้ HTF OB ในการ place order ขนาดใหญ่ reaction จึงแรงและน่าเชื่อถือกว่า","เพราะ HTF OB เกิดบ่อยกว่า","เพราะ HTF OB ไม่มีวันหมดอายุ"],
+   ans:1,exp:"HTF OB (Daily, H4) สะท้อน order ของ institutional traders ที่ขนาดใหญ่กว่ามาก reaction จึงแรงและชัดเจนกว่า LTF OB ควรใช้ HTF OB เป็น bias และ LTF OB เป็น precise entry"},
+  {id:42,section:"Order Blocks",q:"Volume Imbalance ใน SMC แตกต่างจาก FVG อย่างไร?",
+   opts:["เหมือนกันทุกประการ","Volume Imbalance เกิดระหว่าง Close ของแท่งหนึ่งกับ Open ของแท่งถัดไป ส่วน FVG ต้องการ 3 แท่ง","Volume Imbalance ใช้ได้เฉพาะ intraday","FVG แม่นกว่าเสมอ"],
+   ans:1,exp:"Volume Imbalance เกิดเมื่อ Close ของแท่งปัจจุบันไม่ overlap กับ Open ของแท่งถัดไป เกิดจากการ gap ระหว่างแท่ง ส่วน FVG ต้องการแท่งที่ 1 และ 3 มาวิเคราะห์ ทั้งสองเป็นโซนที่ราคามักกลับมา fill"},
+  {id:43,section:"Order Blocks",q:"เมื่อพบ Bullish OB ใน Discount zone พร้อม Bullish FVG ซ้อนอยู่ด้วย ควรตั้ง entry อย่างไร?",
+   opts:["entry ที่ขอบล่างของ OB เท่านั้น","entry ที่ FVG ก่อนเพราะเป็น imbalance ที่แม่นกว่า หรือรอ LTF confirmation ใน zone overlap ระหว่าง OB และ FVG","entry ที่ราคาตลาดทันที","entry ที่ขอบบนของ OB"],
+   ans:1,exp:"เมื่อ OB และ FVG ซ้อนกัน (confluence) zone overlap นั้นคือ highest probability entry โดยเฉพาะถ้าอยู่ใน Discount zone ด้วย อาจรอ LTF (M5/M1) CHoCH เป็น confirmation ก่อน entry"},
+
+  // ── Fair Value Gap (44-50) ──
+  {id:44,section:"Fair Value Gap",q:"FVG ขนาดเท่าไหร่จึงถือว่ามีนัยสำคัญสำหรับ Gold (XAUUSD)?",
+   opts:["ทุกขนาด แม้แต่ 1 pip","ขึ้นอยู่กับ timeframe แต่ควรเห็นได้ชัดบนกราฟ ไม่ใช่แค่ noise","เฉพาะ FVG ที่ใหญ่กว่า 50 pips เท่านั้น","FVG ที่เกิดหลัง News เท่านั้น"],
+   ans:1,exp:"ขนาด FVG ที่มีนัยสำคัญขึ้นอยู่กับ timeframe ใน H1 FVG ควรใหญ่พอให้เห็นชัด (ไม่ใช่ noise) ใน M15 อาจเล็กกว่าได้ สิ่งสำคัญคือ FVG ต้องเกิดหลัง displacement หรือ BOS จึงจะมีน้ำหนัก"},
+  {id:45,section:"Fair Value Gap",q:"Balanced Price Range (BPR) ใน SMC คืออะไร?",
+   opts:["ราคาที่ balance ระหว่าง Buy และ Sell","โซนที่ Bullish FVG และ Bearish FVG ซ้อนทับกัน เป็น high probability reversal zone","ราคาเฉลี่ยรายวัน","ราคา open ของแต่ละ session"],
+   ans:1,exp:"BPR เกิดเมื่อ Bullish FVG และ Bearish FVG ซ้อนทับกันในพื้นที่เดียวกัน zone overlap นั้นเป็น high probability reaction zone เพราะ Smart Money จากทั้งสองทิศมี interest ที่ระดับนั้น"},
+  {id:46,section:"Fair Value Gap",q:"Consequent Encroachment (CE) ของ FVG คืออะไร?",
+   opts:["การที่ราคา fill FVG เต็ม 100%","จุดกึ่งกลาง (50%) ของ FVG ซึ่งเป็นระดับที่ Smart Money มักตอบสนองมากที่สุด","การที่ FVG ถูก overlap โดย FVG อื่น","การที่ราคาทะลุผ่าน FVG ไปโดยไม่ fill"],
+   ans:1,exp:"CE คือจุดกึ่งกลาง 50% ของ FVG ซึ่งเป็นระดับที่ Smart Money มักมี reaction มากที่สุด แทนที่จะรอให้ราคา fill FVG เต็ม 100% การ entry ที่ CE มักให้ SL แคบและ RRR ดีกว่า"},
+  {id:47,section:"Fair Value Gap",q:"เมื่อราคา fill FVG เต็ม 100% แล้วยังเดินหน้าต่อ หมายความว่าอะไร?",
+   opts:["FVG ยังคงใช้งานได้ต่อ","FVG นั้น Invalidated แล้ว thesis เดิมต้องทบทวน","ควร add position เพิ่ม","เป็นสัญญาณ buy the dip"],
+   ans:1,exp:"FVG ที่ถูก fill เกิน 100% (ราคาเดินผ่าน FVG ไปโดยไม่ bounce) ถือว่า Invalidated หมายความว่า thesis เดิมผิด ควรหยุด trade ตาม setup นั้นและรอ setup ใหม่ที่ valid กว่า"},
+  {id:48,section:"Fair Value Gap",q:"FVG ใน higher timeframe (Daily) มีความสำคัญอย่างไรต่อการเทรด Gold?",
+   opts:["ใช้ได้เฉพาะ day trading","เป็น major zone ที่ราคาอาจ retrace กลับมาในระยะวัน-สัปดาห์ ควรใช้เป็น HTF bias","ใช้เป็น entry point โดยตรงได้เลย","ไม่มีความสำคัญเพราะ Gold เป็น trend market"],
+   ans:1,exp:"Daily FVG เป็น major imbalance zone ที่ราคาอาจใช้เวลาเป็นวันหรือสัปดาห์กว่าจะกลับมา fill ควรใช้เป็น HTF target หรือ reversal zone และ drill down ไป LTF เพื่อหา precise entry เมื่อราคาเข้าใกล้"},
+  {id:49,section:"Fair Value Gap",q:"Opening Gap ใน Gold (ช่วง market reopen วันจันทร์) เกี่ยวข้องกับ FVG อย่างไร?",
+   opts:["ไม่เกี่ยวกันเลย","Opening Gap ถือเป็น FVG ประเภทหนึ่ง ราคามักพยายาม fill gap นั้นก่อนเดินหน้าต่อ","Opening Gap บ่งบอกว่าควร trade ตามทิศของ gap เสมอ","Opening Gap ควรหลีกเลี่ยง"],
+   ans:1,exp:"Opening Gap ใน Gold (weekend gap) ถือเป็น imbalance/FVG ประเภทหนึ่ง ราคามักพยายาม fill gap นั้นในช่วง Monday/Tuesday ก่อนเดินหน้าในทิศ weekly bias แต่ไม่ได้ fill เสมอไปทุกครั้ง"},
+  {id:50,section:"Fair Value Gap",q:"Gap Fill ใน SMC หมายถึงอะไร และ fill ครบ 100% เสมอไปหรือไม่?",
+   opts:["Fill ครบ 100% เสมอ เป็น rule ที่แน่นอน","ราคาพยายาม revisit FVG zone แต่ไม่จำเป็นต้อง fill ครบ 100% เสมอไป บางครั้ง partial fill แล้ว bounce","Fill ได้เฉพาะในช่วง Asian session","Fill ครบ 100% เสมอแต่ใช้เวลานาน"],
+   ans:1,exp:"Gap Fill ไม่ได้เกิด 100% เสมอไป ราคาอาจ bounce จาก CE (50%) หรือ partial fill แล้วกลับทิศ สิ่งสำคัญคือต้องรอ LTF confirmation เมื่อราคาเข้า FVG zone ไม่ใช่ assume ว่าจะ fill ครบ"},
+
+  // ── Liquidity (51-57) ──
+  {id:51,section:"Liquidity",q:"Liquidity Void ใน SMC คืออะไร?",
+   opts:["ช่วงที่ไม่มี order ในตลาดเลย","โซนที่ราคาวิ่งผ่านอย่างรวดเร็วโดยไม่มี order resting มาก ทำให้เกิด imbalance ขนาดใหญ่","ช่วงที่ตลาดปิด","โซนที่มี spread กว้างมาก"],
+   ans:1,exp:"Liquidity Void เกิดเมื่อราคาวิ่งผ่านโซนใดโซนหนึ่งเร็วมากจนไม่มี order resting มากพอ ทำให้เกิด imbalance ขนาดใหญ่ ราคามักกลับมา fill void นั้นในภายหลัง"},
+  {id:52,section:"Liquidity",q:"Old High / Old Low ใน SMC มีความสำคัญอย่างไร?",
+   opts:["ใช้เป็น entry point โดยตรง","เป็นแหล่ง liquidity ชั้นสำคัญ retail traders จำนวนมากวาง SL ไว้ใกล้จุดนั้น Smart Money มักไป grab ก่อน","ไม่มีความสำคัญใน SMC","ใช้เป็น Take Profit เสมอ"],
+   ans:1,exp:"Old High/Low คือจุดที่ retail traders จำนวนมากวาง SL ไว้ (SL ของ Long วางไว้ใต้ Old Low, SL ของ Short วางไว้เหนือ Old High) Smart Money จะ sweep จุดเหล่านี้เพื่อ fill order ขนาดใหญ่ก่อนกลับทิศ"},
+  {id:53,section:"Liquidity",q:"Previous Day High (PDH) และ Previous Day Low (PDL) ใน Gold trading มีความสำคัญอย่างไร?",
+   opts:["ใช้เป็น Support/Resistance แบบ traditional","เป็นแหล่ง intraday liquidity ที่ Smart Money มักวิ่งไป grab ในช่วง London หรือ NY Open","ใช้เป็น entry เสมอเมื่อราคาแตะ","ไม่สำคัญสำหรับ Gold"],
+   ans:1,exp:"PDH และ PDL เป็น key intraday liquidity levels สำหรับ Gold Smart Money มักวิ่งไป grab PDH (sweep ขึ้น) หรือ PDL (sweep ลง) ในช่วง Kill Zone แล้วกลับทิศ เป็น setup ที่ดีมากสำหรับ intraday trading"},
+  {id:54,section:"Liquidity",q:"Weekly High/Low ใน Gold trading สำคัญกว่า Daily High/Low อย่างไร?",
+   opts:["ไม่แตกต่างกัน","Weekly High/Low เป็น major liquidity target ที่ใช้เวลาหลายวันกว่าจะ sweep เหมาะสำหรับ swing trade","Weekly High/Low ใช้ได้เฉพาะ institutional traders","Weekly High/Low มักไม่ถูก sweep"],
+   ans:1,exp:"Weekly High/Low เป็น major liquidity pool ที่ institutional traders จับตา Smart Money มักวางแผน sweep weekly high/low ในช่วงต้นสัปดาห์ก่อนเคลื่อนในทิศ weekly bias เหมาะสำหรับ swing trade"},
+  {id:55,section:"Liquidity",q:"Turtle Soup ใน SMC/ICT คืออะไร?",
+   opts:["Strategy ที่ซื้อขายตาม breakout","Setup ที่ fade (trade ตรงข้าม) การ breakout ปลอมของ previous high/low โดยรอ confirmation ว่าราคากลับมา","Pattern เฉพาะของแท่งเทียน 3 แท่ง","การเทรดในช่วง low volatility"],
+   ans:1,exp:"Turtle Soup คือ strategy ที่ fade false breakout ของ previous high/low เมื่อราคาทะลุ previous high แล้วกลับลงมาปิดกลับเข้าไป (sweep + rejection) เป็นสัญญาณ Sell เพราะ Smart Money sweep BSL แล้ว"},
+  {id:56,section:"Liquidity",q:"ทำไม Trendlines ใน technical analysis ถึงเป็นแหล่ง Liquidity ใน SMC?",
+   opts:["เพราะ trendline เป็น support/resistance ที่แน่นอน","เพราะ retail traders จำนวนมากวาง orders และ SL ตาม trendline Smart Money จึงใช้ trendline เป็น liquidity target","เพราะ trendline แม่นยำ 100%","เพราะสถาบันการเงินใช้ trendline"],
+   ans:1,exp:"Trendline เป็น tool ที่ retail traders นิยมใช้มาก ทำให้มี orders และ SL cluster ตาม trendline มากมาย Smart Money จึงมักพุ่งไป grab liquidity ที่ trendline ก่อนกลับทิศ แทนที่จะ bounce จาก trendline ตามที่ retail คาดหวัง"},
+  {id:57,section:"Liquidity",q:"หลัง Liquidity Sweep เกิดขึ้น ขั้นตอนต่อไปที่ควรทำใน SMC คืออะไร?",
+   opts:["เข้า trade ทันทีในทิศตรงข้ามกับ sweep","รอดู market structure ใน lower TF ว่ามี CHoCH หรือ BOS เกิดขึ้นหรือไม่ก่อน entry","รอ 30 นาทีแล้วค่อย entry","ดู indicator ว่าตรงกับ sweep หรือไม่"],
+   ans:1,exp:"หลัง sweep ควรรอ confirmation ใน LTF ว่ามี CHoCH (Change of Character) หรือ BOS เกิดขึ้นหรือไม่ เพราะ sweep อย่างเดียวไม่พอ ต้องมี confirmation ว่า Smart Money เปลี่ยนทิศแล้วจริงๆ จึง entry ได้"},
+
+  // ── Premium & Discount (58-62) ──
+  {id:58,section:"Premium & Discount",q:"Fibonacci retracement ใช้ร่วมกับ Premium/Discount zone อย่างไรใน SMC?",
+   opts:["ใช้แทนกันได้ ไม่ต้องใช้ทั้งคู่","Fib 0.5 = Equilibrium, 0.618-0.786 = Discount zone (สำหรับ Buy ใน uptrend) ใช้ยืนยัน Premium/Discount zone","ใช้เฉพาะ Fib 0.382 เท่านั้น","Fibonacci ไม่เกี่ยวกับ SMC"],
+   ans:1,exp:"Fibonacci retracement ช่วยหา Premium/Discount zone ได้แม่นขึ้น โดย 0.5 = Equilibrium, 0.618 และ 0.786 อยู่ใน Discount zone เหมาะ Buy ใน uptrend SMC traders ใช้ Fib เป็น confluence กับ OB และ FVG"},
+  {id:59,section:"Premium & Discount",q:"ใน Bearish bias ควร Sell เมื่อราคาอยู่ที่ระดับใด?",
+   opts:["ที่ Discount zone เพราะราคาถูก","ที่ Premium zone + Bearish OB หรือ Bearish FVG","ที่ Equilibrium เสมอ","ทุกระดับราคาเหมือนกัน"],
+   ans:1,exp:"ใน Bearish bias ควร Sell เฉพาะเมื่อราคา retrace ขึ้นมาใน Premium zone (เหนือ 50%) และมี Bearish OB หรือ Bearish FVG เป็น confluence การ Sell ใน Discount zone ขณะ Bearish คือการ sell low ซึ่งมี probability ต่ำ"},
+  {id:60,section:"Premium & Discount",q:"Optimal Trade Entry (OTE) ใน ICT/SMC หมายถึงอะไร?",
+   opts:["การ entry ที่ราคาตลาดทันที","โซน Fibonacci 0.62-0.79 ที่ถือว่าเป็น optimal entry ในแนวโน้มหลัก","การ entry เมื่อ RSI oversold/overbought","การ entry หลัง news"],
+   ans:1,exp:"OTE คือโซน Fibonacci 0.62-0.79 ของ impulse swing ล่าสุด ซึ่งอยู่ใน Discount zone (สำหรับ Buy) หรือ Premium zone (สำหรับ Sell) ถือว่าเป็นจุด entry ที่ให้ RRR ดีที่สุดตาม ICT concept"},
+  {id:61,section:"Premium & Discount",q:"ถ้า Gold วิ่งจาก 2200 ลงมาที่ 2100 ใน H4 Bearish OB ที่น่าสนใจ Sell ควรอยู่ในระดับใด?",
+   opts:["ต่ำกว่า 2100 เพราะเป็น new low","ระหว่าง 2150-2200 เพราะอยู่ใน Premium zone (เหนือ 50% ของ swing)","ที่ 2150 พอดี เสมอ","ทุกระดับ ไม่สำคัญ"],
+   ans:1,exp:"Equilibrium = (2200+2100)/2 = 2150 โซนเหนือ 2150 คือ Premium zone เหมาะ Sell ใน Bearish bias Bearish OB ที่อยู่ระหว่าง 2150-2200 คือ high probability setup เพราะอยู่ใน Premium zone"},
+  {id:62,section:"Premium & Discount",q:"เหตุใดจึงไม่ควร Buy เมื่อราคาอยู่ใน Premium zone แม้จะมี Bullish signal?",
+   opts:["เพราะ spread กว้างกว่าในช่วงนั้น","เพราะราคา 'แพง' อยู่แล้ว probability ที่ Smart Money จะ Sell มากกว่า Buy ทำให้ trade ต้าน institutional flow","เพราะ volume ต่ำใน Premium zone","เพราะเป็น rule ที่ตายตัว"],
+   ans:1,exp:"การ Buy ใน Premium zone หมายถึง Buy เมื่อราคา 'แพง' แล้ว Smart Money ที่ accumulate ไว้ใน Discount zone มีโอกาสสูงที่จะ take profit หรือ reverse ใน Premium zone ทำให้ probability ต่ำสำหรับ Buy"},
+
+  // ── Sessions & Timing (63-69) ──
+  {id:63,section:"Sessions & Timing",q:"Asian Session สำหรับ Gold (XAUUSD) มักมีลักษณะอย่างไร?",
+   opts:["Volatile และ trend ชัดเจนที่สุด","Range แคบ ราคาแกว่งสร้าง consolidation และ liquidity pool ที่ London จะมา sweep","เหมือน London session ทุกประการ","ไม่มีการเคลื่อนไหวเลย"],
+   ans:1,exp:"Asian session มักเป็นช่วง low volatility สำหรับ Gold ราคาสร้าง range แคบและสะสม liquidity (EQH/EQL) ที่ London Open มักมา sweep ก่อน trend จริงจะเริ่ม Asian range high/low จึงเป็น key levels"},
+  {id:64,section:"Sessions & Timing",q:"London Open Manipulation ใน Gold คืออะไร?",
+   opts:["การที่ London traders จงใจ ขัดขวาง การเทรด","การที่ราคา spike ขึ้นหรือลงในช่วง London Open เพื่อ sweep liquidity ก่อนกลับทิศและ trend จริงเริ่ม","ข่าว economic ที่ออกช่วง London","การที่ spread กว้างขึ้นช่วง London Open"],
+   ans:1,exp:"London Open Manipulation คือ false move ที่เกิดในช่วงแรกของ London session (02:00-04:00 NY Time) ราคามัก spike เพื่อ grab liquidity แล้วกลับทิศ retail traders ที่ trade ตาม spike มักถูก stop out"},
+  {id:65,section:"Sessions & Timing",q:"New York AM Session (07:00-10:00 NY Time) มีลักษณะอย่างไรสำหรับ Gold?",
+   opts:["Volatility ต่ำที่สุดในวัน","เป็นช่วงที่ trend จริงมักเริ่มหลังจาก London manipulation เสร็จ มีโอกาส high probability setup สูง","เป็นช่วงที่ควรหลีกเลี่ยง","Spread กว้างที่สุด"],
+   ans:1,exp:"NY AM session คือช่วงที่ trend จริงสำหรับวันนั้นมักเริ่ม หลังจาก London ทำ manipulation เสร็จแล้ว setups ใน NY AM มักมี momentum แรงกว่าและ follow-through ดีกว่า London session"},
+  {id:66,section:"Sessions & Timing",q:"วันอังคารและพุธมีความสำคัญอย่างไรสำหรับ Gold trader ใน SMC?",
+   opts:["เป็นวันที่ spread กว้างที่สุด","เป็นวันที่ weekly high/low มักถูกสร้างขึ้น ทำให้มี directional move ที่ชัดเจนกว่าวันอื่น","เป็นวันที่ควรหยุดเทรด","ไม่มีความแตกต่างจากวันอื่น"],
+   ans:1,exp:"วันอังคาร-พุธมักเป็นวันที่ weekly high หรือ low ถูกสร้าง (ตาม ICT Weekly Profile) หลังจาก Monday อาจสร้าง false move Smart Money มักสร้าง directional move ที่ชัดเจนในสองวันนี้"},
+  {id:67,section:"Sessions & Timing",q:"FOMC, NFP, CPI ส่งผลต่อ Gold อย่างไรในมุมมอง SMC?",
+   opts:["ไม่มีผลต่อ SMC analysis","เป็นตัวเร่ง (catalyst) ที่ทำให้ราคาเคลื่อนที่ไปหา liquidity zones ที่วิเคราะห์ไว้เร็วขึ้น","ทำให้ SMC analysis ใช้ไม่ได้","ควรหยุดเทรดก่อน news ทุกครั้ง"],
+   ans:1,exp:"High impact news เช่น FOMC, NFP, CPI เป็น catalyst ที่เร่งให้ราคาเคลื่อนไปหา liquidity zones ที่ Smart Money วางไว้ SMC traders มักหลีกเลี่ยง entry ก่อน news 30 นาที แต่จะรอ setup หลัง news spike แทน"},
+  {id:68,section:"Sessions & Timing",q:"Silver (XAGUSD) มีความสัมพันธ์กับ Gold (XAUUSD) อย่างไรในการ confirm direction?",
+   opts:["ไม่มีความสัมพันธ์กัน","Silver มักเคลื่อนไปในทิศเดียวกับ Gold การที่ทั้งคู่ตรงกันเพิ่ม confidence ในการ trade Gold","Silver เคลื่อนตรงข้าม Gold เสมอ","ใช้ Silver แทน Gold ได้"],
+   ans:1,exp:"Gold และ Silver มี positive correlation สูง ถ้า Gold Bullish bias และ Silver ก็แสดง Bullish structure ด้วย ถือเป็น confluence เพิ่มเติม ICT เรียกการดู related markets ว่า Intermarket Analysis"},
+  {id:69,section:"Sessions & Timing",q:"DXY (US Dollar Index) สัมพันธ์กับ Gold อย่างไร?",
+   opts:["สัมพันธ์เชิงบวก ดอลลาร์แข็ง Gold แข็งตาม","สัมพันธ์เชิงลบ ดอลลาร์แข็ง Gold มักอ่อน และในทางกลับกัน","ไม่มีความสัมพันธ์","สัมพันธ์กันเฉพาะช่วง London session"],
+   ans:1,exp:"DXY และ Gold มี negative correlation ค่อนข้างสูง เมื่อ DXY แข็งค่า Gold มักอ่อนตัว และเมื่อ DXY อ่อนค่า Gold มักแข็ง SMC traders ใช้ DXY เพื่อ confirm Gold bias โดยเฉพาะใน HTF"},
+
+  // ── Entry & RR (70-78) ──
+  {id:70,section:"Entry & RR",q:"Partial Take Profit ใน SMC คืออะไร และทำไมจึงสำคัญ?",
+   opts:["การปิด position ทั้งหมดก่อนถึง TP","การปิด position บางส่วนที่ intermediate targets ก่อน เพื่อ lock profit และลด emotional pressure","การตั้ง TP หลายระดับพร้อมกัน","การเพิ่ม position ระหว่างทาง"],
+   ans:1,exp:"Partial TP คือการปิด 50% หรือบางส่วนของ position ที่ระดับกำไรแรก (เช่น 1:1 RR) แล้วปล่อยส่วนที่เหลือวิ่งต่อ ช่วยลด emotional pressure ทำให้ hold trade ได้นานขึ้น และ lock ความสำเร็จบางส่วนก่อน"},
+  {id:71,section:"Entry & RR",q:"Break Even Stop Loss คืออะไร และควรย้ายเมื่อไหร่?",
+   opts:["SL ที่ตั้งไว้เท่ากับ TP","การย้าย SL มาที่ entry point หลังราคาเคลื่อนไปในทิศที่ต้องการแล้ว เพื่อให้ trade นั้น risk-free","SL ที่อิงตาม ATR","SL ที่ตั้งไว้ก่อน entry"],
+   ans:1,exp:"Break Even (BE) คือการย้าย SL มาที่จุด entry เมื่อราคาเคลื่อนเป็นระยะที่กำหนด (เช่น เมื่อ RR ถึง 1:1) ทำให้ trade นั้น risk-free แม้ราคากลับมา trade ไม่ขาดทุน แต่ควรระวัง BE เร็วเกินไปทำให้ถูก stop บ่อย"},
+  {id:72,section:"Entry & RR",q:"Maximum Drawdown ที่ยอมรับได้ต่อวันสำหรับ Gold trader ที่ดีควรเป็นเท่าไหร่?",
+   opts:["ไม่มีขีดจำกัด","3-5% ต่อวัน เป็น standard ที่ใช้กันใน professional trading","50% ต่อวัน","10% ต่อ trade ก็เพียงพอ"],
+   ans:1,exp:"Daily max drawdown 3-5% คือ limit ที่ professional traders ยึดถือ ถ้าขาดทุนถึง limit นั้นในวันนั้นควรหยุดเทรดทันที เพื่อป้องกัน revenge trading และรักษา capital ไว้สำหรับวันถัดไป"},
+  {id:73,section:"Entry & RR",q:"Revenge Trading คืออะไร และส่งผลเสียอย่างไร?",
+   opts:["การเทรดซ้ำใน setup เดิม","การเทรด impulsively หลังขาดทุน พยายามหาเงินคืนทันที ทำให้ตัดสินใจด้วยอารมณ์แทนที่จะใช้ logic","การเทรดในทิศตรงข้ามกับ trend","การเพิ่ม lot size หลังกำไร"],
+   ans:1,exp:"Revenge trading เกิดจาก emotional response ต่อการขาดทุน ทำให้เพิ่ม lot size หรือ entry โดยไม่มี setup ที่ดี ส่งผลให้ขาดทุนเพิ่มขึ้นอย่างรวดเร็ว การมี daily loss limit ช่วยป้องกัน revenge trading ได้"},
+  {id:74,section:"Entry & RR",q:"Scaling In (เพิ่ม position ระหว่างทาง) ใน SMC ทำอย่างไรให้ถูกต้อง?",
+   opts:["เพิ่ม position ทุกครั้งที่กำไร","เพิ่ม position ที่ confluences ถัดไปเมื่อ trade ดำเนินในทิศที่ถูกต้อง เช่น เมื่อราคา retrace มา OB หรือ FVG ถัดไป","เพิ่ม position เมื่อขาดทุน","ไม่ควร scale in เลย"],
+   ans:1,exp:"การ scale in ที่ถูกต้องคือเพิ่ม position ที่ confluences ถัดไป (OB หรือ FVG ที่อยู่ในทิศเดียวกัน) เมื่อ trade กำลังเป็นบวกอยู่ ไม่ใช่เพิ่มเมื่อขาดทุน (averaging down) ซึ่งเป็นอันตราย"},
+  {id:75,section:"Entry & RR",q:"Lot Size ของ Gold (XAUUSD) 1 standard lot เมื่อราคาเคลื่อน 1 pip มูลค่าเป็นเท่าไหร่?",
+   opts:["$1 ต่อ pip","$10 ต่อ pip","$100 ต่อ pip","$1000 ต่อ pip"],
+   ans:1,exp:"Gold (XAUUSD) 1 standard lot = 100 oz เมื่อราคาเคลื่อน $1 (= 10 pips ใน 2 decimal) มูลค่า = $100 ดังนั้น 1 pip (0.10) = $10 การรู้ pip value ช่วยคำนวณ lot size และ SL ได้ถูกต้อง"},
+  {id:76,section:"Entry & RR",q:"ถ้า Account $10,000 เสี่ยง 1% ต่อ trade SL = 20 pips ควรใช้ lot size เท่าไหร่? (Gold 1 pip = $10/lot)",
+   opts:["0.25 lot","0.5 lot","1 lot","2 lot"],
+   ans:1,exp:"Risk amount = $10,000 × 1% = $100 SL value per lot = 20 pips × $10 = $200 ดังนั้น Lot size = $100 / $200 = 0.5 lot การคำนวณ position sizing อย่างถูกต้องสำคัญมากในการจัดการความเสี่ยง"},
+  {id:77,section:"Entry & RR",q:"Take Profit target ใน SMC ควรวางที่ไหน?",
+   opts:["ที่ระยะ 2 เท่าของ SL เสมอ","ที่ liquidity targets ถัดไป เช่น Previous High/Low, EQH/EQL, HTF OB, หรือ FVG","ที่ตัวเลขกลม เช่น 2000, 2050","ที่ resistance เก่าเสมอ"],
+   ans:1,exp:"TP ที่ดีใน SMC วางที่ liquidity targets เช่น Previous High/Low, EQH/EQL, HTF OB หรือ FVG ที่ยังไม่ถูก fill เพราะ Smart Money มีแนวโน้มพา price ไปถึงจุดเหล่านั้น ดีกว่าใช้ fixed RRR"},
+  {id:78,section:"Entry & RR",q:"Trading Journal มีความสำคัญอย่างไรใน SMC trading?",
+   opts:["ไม่จำเป็นเลย","ช่วย track ผลการเทรด วิเคราะห์ patterns ที่ทำกำไร/ขาดทุน และ identify จุดอ่อนของตัวเองเพื่อปรับปรุง","ใช้เฉพาะ professional traders","สำคัญเฉพาะช่วงเริ่มต้น"],
+   ans:1,exp:"Trading Journal เป็นเครื่องมือพัฒนาตัวเองที่สำคัญมาก ช่วยให้เห็น patterns ที่ได้กำไรและขาดทุน session ที่ดีและแย่ emotion ที่ส่งผลต่อการตัดสินใจ ทำให้ improve ได้เร็วกว่าการเทรดโดยไม่มี journal"},
+
+  // ── Multi-Timeframe (79-85) ──
+  {id:79,section:"Multi-Timeframe",q:"สำหรับ Intraday Gold trading MTF combination ที่นิยมใช้คืออะไร?",
+   opts:["Weekly/Daily/H4 เท่านั้น","H4/H1 สำหรับ bias + M15/M5 สำหรับ entry confirmation","M1 เท่านั้น","Daily เท่านั้น"],
+   ans:1,exp:"Intraday Gold trading นิยมใช้ H4 หรือ H1 สำหรับดู bias และ structure หลัก แล้วลงมา M15 หรือ M5 เพื่อหา entry confirmation เช่น LTF CHoCH หรือ OB ที่ precision กว่า"},
+  {id:80,section:"Multi-Timeframe",q:"เมื่อ HTF และ LTF ขัดแย้งกัน ควรปฏิบัติอย่างไร?",
+   opts:["trade ตาม LTF เพราะ entry แม่นกว่า","skip trade นั้นไปหรือรอให้ทั้งสอง TF align กันก่อน","trade ทั้งสองทิศพร้อมกัน","เลือก TF ที่ตัวเองชอบมากกว่า"],
+   ans:1,exp:"เมื่อ HTF และ LTF ขัดแย้ง probability ของ trade ลดลงอย่างมาก ทางเลือกที่ดีที่สุดคือ skip และรอให้ทั้งสอง TF align กัน การ force trade ในช่วงที่ TF ขัดแย้งมักนำไปสู่การขาดทุน"},
+  {id:81,section:"Multi-Timeframe",q:"Daily Bias ใน Gold หมายถึงอะไร และกำหนดจากอะไร?",
+   opts:["ทิศทางที่คาดว่าราคาจะเคลื่อนในวันนั้น กำหนดจาก HTF structure และ key levels","เส้น moving average รายวัน","ทิศทางของ news ประจำวัน","ทิศทางที่ position ใหญ่ที่สุด"],
+   ans:0,exp:"Daily Bias คือทิศทางที่คาดว่า Gold จะเคลื่อนในวันนั้น กำหนดจากการวิเคราะห์ Weekly/Daily structure, HTF OB/FVG, liquidity targets, และ market context เมื่อมี bias ชัดเจนแล้วจึงลงมาหา LTF entry"},
+  {id:82,section:"Multi-Timeframe",q:"Macro Analysis สำหรับ Gold ครอบคลุมอะไรบ้าง?",
+   opts:["เฉพาะ Daily chart","Weekly และ Monthly chart เพื่อดู major trend, HTF OB/FVG, และ major liquidity targets ที่อยู่ห่างออกไป","เฉพาะ news events","เฉพาะ Fibonacci levels"],
+   ans:1,exp:"Macro Analysis ครอบคลุม Weekly และ Monthly TF เพื่อดู major trend direction, significant OB/FVG, major liquidity pools (Old Weekly/Monthly High/Low) ช่วยให้เข้าใจภาพใหญ่ก่อนลงมา execute ใน LTF"},
+  {id:83,section:"Multi-Timeframe",q:"ทำไมการดู M1 ก่อนเปิด Daily chart จึงเป็นความผิดพลาดใน SMC?",
+   opts:["ไม่ใช่ความผิดพลาด ดู M1 ก่อนได้","M1 มี noise มากและไม่มี context ทำให้ตัดสินใจโดยไม่รู้ว่าราคาอยู่ที่ไหนใน big picture","M1 ช้าเกินไป","M1 ใช้ได้แค่ scalping"],
+   ans:1,exp:"การดู LTF ก่อน HTF ทำให้ขาด context ของ big picture อาจเห็น Bullish signal ใน M1 ขณะที่ Daily เป็น Bearish อยู่ ทำให้ trade ผิดทิศ Top-Down Analysis (HTF → LTF) เป็นหลักการสำคัญของ SMC"},
+  {id:84,section:"Multi-Timeframe",q:"Higher Timeframe OB ที่ LTF retrace มาหา ควรใช้ LTF ขนาดไหนเพื่อหา entry?",
+   opts:["ใช้ HTF เดิมเปิด position ได้เลย","ลงมา 3-4 TF ต่ำกว่า เช่น Daily OB → ใช้ M15 หรือ M5 เพื่อหา LTF CHoCH หรือ OB เป็น entry","ใช้ M1 เสมอ","ใช้ TF เดิมกับ OB"],
+   ans:1,exp:"Rule of thumb คือลงมา 3-4 TF ต่ำกว่า HTF OB เพื่อหา entry เช่น Daily OB → H1/M15 สำหรับ confirmation, H4 OB → M15/M5 ทำให้ SL แคบลงอย่างมากและ RRR ดีขึ้นมาก"},
+  {id:85,section:"Multi-Timeframe",q:"Weekly Profile ใน ICT/SMC สำหรับ Gold หมายถึงอะไร?",
+   opts:["รูปแบบกราฟรายสัปดาห์","การคาดการณ์ว่าราคาจะสร้าง weekly high และ low ในวันไหนและลักษณะใด เพื่อ plan trade ล่วงหน้า","ผล performance รายสัปดาห์","การวิเคราะห์ข่าวรายสัปดาห์"],
+   ans:1,exp:"Weekly Profile คือ framework ที่ ICT พัฒนาขึ้นเพื่อคาดการณ์ว่า weekly high/low จะเกิดวันไหน (มักวันอังคาร-พุธ) และราคาจะเคลื่อนในรูปแบบใด ช่วยให้วาง trade plan ล่วงหน้าได้ดีขึ้น"},
+
+  // ── Psychology & Mindset (86-92) ──
+  {id:86,section:"Psychology & Mindset",q:"FOMO (Fear of Missing Out) ส่งผลเสียต่อ trader อย่างไร?",
+   opts:["ช่วยให้ trade บ่อยขึ้นและกำไรมากขึ้น","ทำให้ chase price เข้า trade ที่ไม่มี setup ที่ดี มักเข้า late และถูก stop out เมื่อราคา retrace","ช่วยให้ตัดสินใจเร็วขึ้น","ไม่มีผลต่อผลการเทรด"],
+   ans:1,exp:"FOMO ทำให้ trader เข้า trade หลังราคาวิ่งไปมากแล้ว SL ต้องวางห่างมาก RRR แย่ลง และมักถูก stop out เมื่อราคา retrace วิธีแก้คือมี rule ชัดเจนและยอมรับว่าบาง setup จะ miss ไปได้"},
+  {id:87,section:"Psychology & Mindset",q:"ทำไม Over-trading จึงเป็นสาเหตุหลักที่ทำให้ trader ขาดทุนสะสม?",
+   opts:["เพราะ trade บ่อยทำให้เสีย commission มาก","เพราะการ trade บ่อยเกินไปทำให้เข้า trade ที่ไม่มี quality setup มี spread cost สะสม และ emotional fatigue","เพราะ broker ไม่ชอบ","เพราะ leverage สูงขึ้น"],
+   ans:1,exp:"Over-trading ทำให้เข้า trade ที่ไม่มี high quality setup เสีย spread/commission สะสม และสร้าง emotional fatigue ที่ทำให้ตัดสินใจแย่ลง quality trade ไม่กี่ครั้งต่อสัปดาห์ดีกว่า trade ทุกวัน"},
+  {id:88,section:"Psychology & Mindset",q:"Process-based thinking vs Result-based thinking ใน trading แตกต่างกันอย่างไร?",
+   opts:["เหมือนกันทุกประการ","Process-based = focus ที่การ execute ตาม plan อย่างถูกต้อง, Result-based = focus ที่กำไร/ขาดทุนของแต่ละ trade","Process-based ดีกว่าสำหรับมือใหม่เท่านั้น","Result-based ดีกว่าสำหรับ professional"],
+   ans:1,exp:"Process-based thinking คือการ focus ที่ execute plan ได้ถูกต้องและสม่ำเสมอ ไม่ว่า trade นั้นจะ win หรือ loss ผลในระยะยาวจะดีถ้า process ถูกต้อง Result-based thinking ทำให้ emotional และอาจเปลี่ยน strategy บ่อยเกินไป"},
+  {id:89,section:"Psychology & Mindset",q:"Confirmation Bias ในการเทรด Gold ด้วย SMC คืออะไร?",
+   opts:["การยืนยัน trade ด้วย multiple confluences","การที่ trader หาแต่ข้อมูลที่สนับสนุน bias ที่ตัวเองมีอยู่แล้ว ละเลยสัญญาณตรงข้าม","การใช้ indicator confirm entry","การรอ HTF confirm LTF"],
+   ans:1,exp:"Confirmation Bias ทำให้ trader มองแต่ bullish signals เมื่อคิดว่าตลาดจะขึ้น และ ignore bearish signals ทำให้ analysis ไม่ objective วิธีแก้คือหา invalidation criteria ไว้ก่อนว่า setup จะ invalid เมื่อไหร่"},
+  {id:90,section:"Psychology & Mindset",q:"การ Accept Loss อย่างถูกต้องใน trading หมายถึงอะไร?",
+   opts:["การยอมรับว่าตัวเองไม่ดีพอ","การเข้าใจว่า loss เป็นส่วนหนึ่งของ trading ที่หลีกเลี่ยงไม่ได้ แม้ strategy ดีก็ยังมี losing trades และไม่ควรให้ loss เปลี่ยน behavior","การหยุดเทรดเมื่อขาดทุน","การเพิ่ม lot size ครั้งถัดไปเพื่อชดเชย"],
+   ans:1,exp:"การ accept loss หมายถึงเข้าใจว่าแม้ strategy ดีมาก win rate อาจแค่ 40-60% loss ทุกครั้งต้องเป็น calculated loss ที่อยู่ใน risk management ไม่ใช่ signal ว่า strategy ผิด ต้องไม่ให้ loss แต่ละครั้งทำให้ plan เปลี่ยน"},
+  {id:91,section:"Psychology & Mindset",q:"Backtesting ช่วยพัฒนา SMC trader ได้อย่างไร?",
+   opts:["ไม่มีประโยชน์เพราะตลาดเปลี่ยนตลอด","ช่วย validate strategy, เพิ่ม confidence ในการ execute, และเข้าใจ statistical edge ของ setup ที่ใช้","ใช้แทน live trading ได้เลย","ทำแค่ครั้งเดียวพอ"],
+   ans:1,exp:"Backtesting ช่วยให้รู้ว่า strategy ของตัวเองมี win rate, RRR, และ drawdown เป็นอย่างไรใน historical data ทำให้ execute ได้อย่างมั่นใจและสม่ำเสมอมากขึ้น ควรทำ backtest อย่างน้อย 100 trades ก่อน live trade"},
+  {id:92,section:"Psychology & Mindset",q:"Demo Trading มีประโยชน์อย่างไร และข้อจำกัดคืออะไร?",
+   opts:["ไม่มีประโยชน์เพราะไม่ใช่เงินจริง","ช่วย practice strategy และ execution โดยไม่เสี่ยง แต่ข้อจำกัดคือ emotion ไม่เหมือน live เพราะไม่มีเงินจริงเกี่ยวข้อง","เหมือน live trading ทุกประการ","ควร demo นานที่สุดเท่าที่จะทำได้"],
+   ans:1,exp:"Demo ช่วย practice mechanical skill เช่น entry, SL/TP placement, MTF analysis แต่ไม่สามารถ simulate psychology ของ live trading ได้ครบถ้วน ควร demo จนมี consistent result แล้วจึง transition ไป live ด้วย small size"},
+
+  // ── Gold-Specific Knowledge (93-100) ──
+  {id:93,section:"Gold Knowledge",q:"ทองคำ (XAU) มีหน่วยเป็นอะไรใน Forex market?",
+   opts:["กิโลกรัม","Troy Ounce (oz) โดย 1 troy oz ≈ 31.1 กรัม","Gram","Pound"],
+   ans:1,exp:"ทองคำใน Forex market มีหน่วยเป็น Troy Ounce (oz) ราคา XAUUSD หมายถึงราคาทองคำ 1 troy ounce เป็น USD (1 troy oz ≈ 31.1035 กรัม) ไม่ใช่กิโลกรัมหรือกรัมทั่วไป"},
+  {id:94,section:"Gold Knowledge",q:"ปัจจัยพื้นฐานใดที่ส่งผลต่อราคา Gold มากที่สุดในระยะยาว?",
+   opts:["ราคาน้ำมัน","อัตราดอกเบี้ยสหรัฐ (Fed Rate) และค่าเงินดอลลาร์ (DXY) เป็นหลัก","ราคาหุ้น Amazon","อัตราแลกเปลี่ยน EUR/USD"],
+   ans:1,exp:"อัตราดอกเบี้ยสหรัฐและ DXY มีอิทธิพลมากที่สุดต่อ Gold ในระยะยาว ดอกเบี้ยสูง DXY แข็ง = Gold อ่อน (เพราะ cost of holding Gold สูงขึ้น) ดอกเบี้ยต่ำ DXY อ่อน = Gold แข็ง นอกจากนี้ geopolitical risk ก็สำคัญมาก"},
+  {id:95,section:"Gold Knowledge",q:"Spread ของ Gold (XAUUSD) ใน Forex broker ทั่วไปอยู่ที่เท่าไหร่?",
+   opts:["0.1-0.3 pips เหมือน EUR/USD","2-30 pips ขึ้นอยู่กับ broker และ market condition","100-200 pips","ไม่มี spread สำหรับ Gold"],
+   ans:1,exp:"Spread ของ Gold สูงกว่า major currency pairs มาก ทั่วไปอยู่ที่ $0.20-$3.00 (2-30 pips) ขึ้นอยู่กับ broker, เวลา, และ market condition ช่วง news spread อาจกว้างมาก ควรตรวจสอบ spread ก่อนเทรดเสมอ"},
+  {id:96,section:"Gold Knowledge",q:"Gold เป็น Safe Haven asset หมายความว่าอย่างไร?",
+   opts:["ไม่มีความเสี่ยงเลย","นักลงทุนมักซื้อ Gold เพื่อ hedge ความเสี่ยงในช่วง geopolitical crisis, recession, หรือ market panic ทำให้ Gold มักแข็งค่าในช่วงที่ตลาดหุ้นตก","Gold ปลอดภัยสำหรับ scalping","Gold ไม่ถูก manipulate"],
+   ans:1,exp:"Safe Haven หมายถึงนักลงทุนหันมาถือ Gold เมื่อเกิดความไม่แน่นอน เช่น สงคราม, วิกฤตการเงิน, COVID ทำให้ demand เพิ่มและราคาสูงขึ้น SMC trader ต้องคำนึงถึง market sentiment นี้ร่วมกับ technical analysis"},
+  {id:97,section:"Gold Knowledge",q:"Trading Hours ของ Gold (XAUUSD) ใน Forex market คือช่วงใด?",
+   opts:["เฉพาะ weekday 08:00-17:00 GMT","เกือบ 24 ชั่วโมงต่อวัน 5 วันต่อสัปดาห์ (จันทร์ตี 1 ถึงศุกร์ตี 1 GMT+7)","เฉพาะ London session","เฉพาะ NY session"],
+   ans:1,exp:"Gold เทรดได้เกือบ 24 ชั่วโมงต่อวัน 5 วัน ปิดช่วง weekend ตั้งแต่ศุกร์ปลาย session ถึงจันทร์เช้า สำหรับนักเทรดไทย (GMT+7) เทรดได้ตั้งแต่ประมาณตี 1 วันจันทร์ถึงตี 1 เช้าวันเสาร์"},
+  {id:98,section:"Gold Knowledge",q:"Correlation ระหว่าง Gold กับ US10Y Treasury Yield คืออะไร?",
+   opts:["Positive correlation ผลตอบแทนพันธบัตรสูง Gold สูง","Negative correlation ผลตอบแทนพันธบัตรสูง Gold มักอ่อนตัว เพราะ investor ย้ายไปถือพันธบัตรแทน","ไม่มี correlation","Correlation เปลี่ยนตามฤดูกาล"],
+   ans:1,exp:"Gold มี negative correlation กับ US10Y Yield เมื่อ yield สูง (ดอกเบี้ยสูง) นักลงทุนย้ายเงินไปพันธบัตรที่ให้ผลตอบแทนแทนการถือ Gold ที่ไม่มีดอกเบี้ย SMC trader ควรติดตาม bond market เพื่อ confirm Gold bias"},
+  {id:99,section:"Gold Knowledge",q:"Central Bank Gold Buying ส่งผลต่อราคา Gold อย่างไร?",
+   opts:["ไม่มีผล","เมื่อ Central banks ซื้อ Gold สะสมมาก demand สถาบันเพิ่ม ช่วย support ราคา Gold ในระยะยาว","ทำให้ Gold ราคาลดลง","ส่งผลเฉพาะ short-term"],
+   ans:1,exp:"Central bank buying เป็น major demand driver ของ Gold ในระยะยาว ช่วงหลังปี 2022 central banks ทั่วโลกโดยเฉพาะจีน อินเดีย และตุรกี สะสม Gold อย่างมาก ช่วย support ราคา Gold ในระยะ medium-long term"},
+  {id:100,section:"Gold Knowledge",q:"สิ่งที่ทำให้ SMC trader ที่ดีแตกต่างจาก retail trader ทั่วไปคืออะไร?",
+   opts:["ใช้ indicator มากกว่า","เข้าใจว่าตลาดถูก drive โดย institutional money ไม่ใช่ retail มี plan ชัดเจน execute ตาม system ไม่ตาม emotion และ manage risk อย่างสม่ำเสมอ","เทรดบ่อยกว่า","มี capital มากกว่า"],
+   ans:1,exp:"SMC trader ที่ดีเข้าใจ market microstructure ว่าถูก drive โดย institutional money มี top-down analysis ที่เป็นระบบ execute ตาม setup ที่มี confluence สูง manage risk อย่างเคร่งครัด และพัฒนาตัวเองอย่างต่อเนื่องผ่าน journal และ review"}
+];
+
+const SECTIONS = [...new Set(QUESTIONS.map(q=>q.section))];
+
+let state = {answers:{},revealed:{},filterSec:"ALL",reviewFilter:"all"};
+try{ const s=localStorage.getItem(SAVE_KEY); if(s) state=JSON.parse(s); }catch(e){}
+
+function save(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}
+  updateSyncStatus();
+}
+
+function updateSyncStatus(){
+  const done = Object.keys(state.answers).length + Object.keys(state.revealed).length;
+  const el = document.getElementById("sync-status");
+  if(el) el.textContent = done>0 ? `บันทึกแล้ว ${done} ข้อ · ${new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}` : "—";
+}
+
+function showToast(msg, color){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.borderColor = color||"#00e5a0";
+  t.style.color = color||"#00e5a0";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2800);
+}
+
+function exportProgress(){
+  const done = Object.keys(state.answers).length;
+  if(done===0){ showToast("ยังไม่มีข้อมูลที่จะ Export ครับ", "#ffd166"); return; }
+  const payload = { version:"smc_quiz_v3", exported: new Date().toISOString(), state };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `smc-quiz-progress-${dateStr}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast(`✓ Export สำเร็จ — ตอบแล้ว ${done} ข้อ`, "#00e5a0");
+}
+
+function importProgress(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const payload = JSON.parse(ev.target.result);
+      if(!payload.state || !payload.version){ showToast("✗ ไฟล์ไม่ถูกต้องครับ", "#ff4d6d"); return; }
+      const incoming = payload.state;
+      const inDone = Object.keys(incoming.answers||{}).length;
+      const curDone = Object.keys(state.answers||{}).length;
+      if(curDone>0 && inDone<curDone){
+        if(!confirm(`ข้อมูลปัจจุบัน: ${curDone} ข้อ\nไฟล์ที่ Import: ${inDone} ข้อ\n\nต้องการ Import ทับไหมครับ?`)){
+          e.target.value=""; return;
+        }
+      }
+      state = { answers:{}, revealed:{}, filterSec:"ALL", reviewFilter:"all", ...incoming };
+      save(); updateHeader();
+      const tab = document.querySelector(".tab.active");
+      const cur = tab ? (tab.textContent.includes("สรุป")?"score":tab.textContent.includes("ทบทวน")?"review":"quiz") : "quiz";
+      switchTab(cur);
+      showToast(`✓ Import สำเร็จ — โหลดข้อมูล ${inDone} ข้อ`, "#00e5a0");
+    } catch(err){ showToast("✗ อ่านไฟล์ไม่ได้ กรุณาตรวจสอบครับ", "#ff4d6d"); }
+    e.target.value="";
+  };
+  reader.readAsText(file);
+}
+
+function resetAll(){
+  if(!confirm("รีเซ็ตทั้งหมด? คำตอบและความคืบหน้าทั้งหมดจะหายไป")) return;
+  state={answers:{},revealed:{},filterSec:"ALL",reviewFilter:"all"};
+  save(); updateHeader(); switchTab("quiz");
+  showToast("รีเซ็ตเรียบร้อยแล้วครับ", "#ffd166");
+}
+
+function updateHeader(){
+  const done = Object.keys(state.answers).length;
+  const correct = Object.values(state.answers).filter((v,i)=>{
+    const qi = Object.keys(state.answers)[i];
+    return state.answers[qi] === QUESTIONS.find(q=>q.id==qi)?.ans;
+  }).length;
+  // recount properly
+  let c=0,w=0;
+  QUESTIONS.forEach(q=>{
+    if(state.answers[q.id]!==undefined){
+      if(state.answers[q.id]===q.ans) c++;
+      else w++;
+    }
+  });
+  const total = c+w;
+  document.getElementById("s-score").textContent = total>0 ? Math.round(c/total*100)+"%" : "0%";
+  document.getElementById("s-done").textContent = total;
+  document.getElementById("s-correct").textContent = c;
+  document.getElementById("s-wrong").textContent = w;
+}
+
+function switchTab(t){
+  ["quiz","score","review"].forEach(p=>{
+    document.getElementById("pane-"+p).style.display = p===t?"block":"none";
+  });
+  document.querySelectorAll(".tab").forEach((el,i)=>{
+    el.classList.toggle("active",["quiz","score","review"][i]===t);
+  });
+  if(t==="quiz") renderQuiz();
+  if(t==="score") renderScore();
+  if(t==="review") renderReview();
+}
+
+function renderQuiz(){
+  const qs = state.filterSec==="ALL" ? QUESTIONS : QUESTIONS.filter(q=>q.section===state.filterSec);
+  const answered = qs.filter(q=>state.answers[q.id]!==undefined||state.revealed[q.id]).length;
+  const pct = qs.length>0 ? Math.round(answered/qs.length*100) : 0;
+
+  let html = `<div class="prog-wrap">
+    <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+    <div class="prog-info"><span>PROGRESS ${answered}/${qs.length}</span><span>${pct}%</span></div>
+  </div>`;
+
+  html += `<div class="filter-row"><button class="ftag ${state.filterSec==='ALL'?'active':''}" onclick="setFilter('ALL')">ALL</button>`;
+  SECTIONS.forEach(s=>{
+    html += `<button class="ftag ${state.filterSec===s?'active':''}" style="${state.filterSec===s?'border-color:'+SEC_COLORS[s]+';color:'+SEC_COLORS[s]+';background:'+SEC_COLORS[s]+'15':''}" onclick="setFilter('${s.replace(/'/g,"\\'")}')">
+      ${s.toUpperCase()}
+    </button>`;
+  });
+  html += `</div>`;
+
+  qs.forEach(q=>{
+    const ua = state.answers[q.id];
+    const rev = state.revealed[q.id];
+    const isAnswered = ua!==undefined;
+    const isCorrect = ua===q.ans;
+    const sc = SEC_COLORS[q.section];
+
+    let statusHtml="";
+    if(isAnswered) statusHtml = isCorrect
+      ? `<span class="q-status" style="color:var(--green)">✓ CORRECT</span>`
+      : `<span class="q-status" style="color:var(--red)">✗ WRONG</span>`;
+    else if(rev) statusHtml = `<span class="q-status" style="color:var(--yellow)">— PEEKED</span>`;
+
+    html += `<div class="q-card" id="qc-${q.id}">
+      <div class="q-meta">
+        <span class="sec-tag" style="background:${sc}20;color:${sc}">${q.section.toUpperCase()}</span>
+        <span class="q-num">Q${q.id} / ${QUESTIONS.length}</span>
+        ${statusHtml}
+      </div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">`;
+
+    q.opts.forEach((opt,oi)=>{
+      let cls="opt";
+      if(isAnswered||rev){
+        if(oi===q.ans) cls+=" reveal-ans";
+        if(oi===ua && ua!==q.ans) cls+=" wrong";
+      }
+      const dis=(isAnswered||rev)?"disabled":"";
+      html+=`<button class="${cls}" ${dis} onclick="answer(${q.id},${oi})">
+        <span class="opt-key">${String.fromCharCode(65+oi)}.</span>
+        <span>${opt}</span>
+      </button>`;
+    });
+
+    html += `</div>`;
+    if(isAnswered||rev){
+      html+=`<div class="exp-box">💡 ${q.exp}</div>`;
+    }
+    if(!isAnswered&&!rev){
+      html+=`<div class="q-footer"><button class="btn-peek" onclick="peek(${q.id})">ดูเฉลย ▸</button></div>`;
+    }
+    html+=`</div>`;
+  });
+
+  const allDone = QUESTIONS.filter(q=>state.answers[q.id]!==undefined).length===QUESTIONS.length;
+  if(allDone){
+    html+=`<div style="text-align:center;padding:16px 0 24px">
+      <button class="btn-main btn-green" onclick="switchTab('score')">ดูสรุปคะแนน ▸</button>
+    </div>`;
+  }
+  html+=`<div class="save-note">— บันทึกอัตโนมัติ ปิดแล้วกลับมาทำต่อได้ —</div>`;
+  document.getElementById("pane-quiz").innerHTML=html;
+}
+
+function setFilter(s){
+  state.filterSec=s; save(); renderQuiz();
+}
+
+function answer(qid,oi){
+  state.answers[qid]=oi; save(); updateHeader(); renderQuiz();
+  setTimeout(()=>{
+    const el=document.getElementById("qc-"+qid);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+  },100);
+}
+
+function peek(qid){
+  state.revealed[qid]=true; save(); renderQuiz();
+  setTimeout(()=>{
+    const el=document.getElementById("qc-"+qid);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+  },100);
+}
+
+function renderScore(){
+  let correct=0,wrong=0,peeked=0;
+  const secStats={};
+  SECTIONS.forEach(s=>secStats[s]={c:0,t:0});
+  QUESTIONS.forEach(q=>{
+    secStats[q.section].t++;
+    const ua=state.answers[q.id];
+    if(ua!==undefined){
+      if(ua===q.ans){correct++;secStats[q.section].c++;}
+      else wrong++;
+    } else if(state.revealed[q.id]) peeked++;
+  });
+  const total=correct+wrong;
+  const pct=total>0?Math.round(correct/total*100):0;
+  const allAnswered=QUESTIONS.filter(q=>state.answers[q.id]!==undefined).length;
+
+  let grade,gcol,gbg;
+  if(pct>=90){grade="MASTER — พร้อมเทรดจริงได้แล้ว";gcol=G;gbg="#00e5a020"}
+  else if(pct>=75){grade="ADVANCED — ดีมาก ทบทวนจุดอ่อน";gcol=B;gbg="#4ea8ff20"}
+  else if(pct>=60){grade="INTERMEDIATE — ผ่านได้ ต้องเพิ่มเติม";gcol=Y;gbg="#ffd16620"}
+  else{grade="BEGINNER — ทบทวนใหม่ก่อนเทรดจริง";gcol=R;gbg="#ff4d6d20"}
+
+  let html=`<div class="score-hero">
+    <div class="score-big" style="color:${pct>=60?G:R}">${correct}<span style="font-size:28px;color:#7a9aba">/${QUESTIONS.length}</span></div>
+    <div class="score-sub">ตอบแล้ว ${allAnswered} ข้อ · ถูก ${correct} · ผิด ${wrong} · ดูเฉลย ${peeked}</div>
+    <div class="grade-pill" style="background:${gbg};color:${gcol}">${grade}</div>
+  </div>
+  <div class="cards3">
+    <div class="scard"><div class="scard-val" style="color:${pct>=60?G:R}">${pct}%</div><div class="scard-lbl">SCORE</div></div>
+    <div class="scard"><div class="scard-val" style="color:#00e5a0">${correct}</div><div class="scard-lbl">CORRECT</div></div>
+    <div class="scard"><div class="scard-val" style="color:#ff4d6d">${wrong}</div><div class="scard-lbl">WRONG</div></div>
+  </div>
+  <div class="sec-breakdown">
+    <div class="sec-title">SCORE BY SECTION</div>`;
+
+  SECTIONS.forEach(s=>{
+    const st=secStats[s];
+    const sp=st.t>0?Math.round(st.c/st.t*100):0;
+    const sc=SEC_COLORS[s];
+    html+=`<div class="sec-row">
+      <div class="sec-name" style="color:${sc}">${s}</div>
+      <div class="sec-bar-bg"><div class="sec-bar-fill" style="width:${sp}%;background:${sc}"></div></div>
+      <div class="sec-score">${st.c}/${st.t}</div>
+    </div>`;
+  });
+
+  html+=`</div>
+  <div class="btn-row">
+    <button class="btn-main btn-green" onclick="switchTab('review')">ทบทวนคำตอบ ▸</button>
+  </div>`;
+
+  document.getElementById("pane-score").innerHTML=html;
+}
+
+
+
+function renderReview(){
+  const f=state.reviewFilter||"all";
+  let html=`<div class="filter-btns">
+    <button class="fbtn ${f==='all'?'active':''}" onclick="setReviewFilter('all')">ALL</button>
+    <button class="fbtn ${f==='wrong'?'active':''}" onclick="setReviewFilter('wrong')">WRONG ONLY</button>
+    <button class="fbtn ${f==='correct'?'active':''}" onclick="setReviewFilter('correct')">CORRECT ONLY</button>
+    <button class="fbtn ${f==='peeked'?'active':''}" onclick="setReviewFilter('peeked')">PEEKED</button>
+  </div>`;
+
+  let count=0;
+  QUESTIONS.forEach(q=>{
+    const ua=state.answers[q.id];
+    const rev=state.revealed[q.id];
+    const isCorrect=ua===q.ans;
+    if(f==="wrong"&&(isCorrect||ua===undefined)) return;
+    if(f==="correct"&&(!isCorrect||ua===undefined)) return;
+    if(f==="peeked"&&!rev) return;
+    count++;
+    const sc=SEC_COLORS[q.section];
+    let topbar="";
+    if(ua!==undefined){
+      topbar=isCorrect?"border-top:3px solid #00e5a0":"border-top:3px solid #ff4d6d";
+    } else if(rev){
+      topbar="border-top:3px solid #ffd166";
+    }
+
+    html+=`<div class="rv-card" style="${topbar}">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <span class="sec-tag" style="background:${sc}20;color:${sc}">${q.section.toUpperCase()}</span>
+        <span style="font-size:10px;color:#7a9aba">Q${q.id}</span>
+      </div>
+      <div class="rv-q">${q.q}</div>`;
+
+    if(ua!==undefined){
+      html+=`<div class="rv-row">คุณตอบ: <span style="color:${isCorrect?G:R}">${String.fromCharCode(65+ua)}. ${q.opts[ua]}</span> ${isCorrect?"✓":"✗"}</div>`;
+      if(!isCorrect) html+=`<div class="rv-row">เฉลย: <span style="color:#00e5a0">${String.fromCharCode(65+q.ans)}. ${q.opts[q.ans]}</span></div>`;
+    } else if(rev){
+      html+=`<div class="rv-row" style="color:#ffd166">ดูเฉลยโดยไม่ตอบ — เฉลย: <span>${String.fromCharCode(65+q.ans)}. ${q.opts[q.ans]}</span></div>`;
+    }
+    html+=`<div class="rv-exp">💡 ${q.exp}</div></div>`;
+  });
+
+  if(count===0) html+=`<div class="empty">ไม่มีข้อที่ตรงกับ filter นี้</div>`;
+  document.getElementById("pane-review").innerHTML=html;
+}
+
+function setReviewFilter(f){
+  state.reviewFilter=f; save(); renderReview();
+}
+
+updateHeader();
+updateSyncStatus();
+renderQuiz();
+</script>
+</body>
+</html>
